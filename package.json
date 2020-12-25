@@ -1,0 +1,48 @@
+{
+  "name": "@twoquarterrican/any-reducer",
+  "version": "0.0.1",
+  "description": "'Reduce' objects similar to the way one can reduce arrays. Includes recursive reducer.",
+  "main": "lib/index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitbug.com/twoquarterrican/any-reducer"
+  },
+  "scripts": {
+    "test": "tsdoc-testify --filepath ./src/anyReducer.ts && jest",
+    "lint": "eslint ./src --max-warnings 0 --ext .ts && prettier --check src",
+    "prettier": "prettier --write src",
+    "compile": "tsc -p tsconfig.json"
+  },
+  "keywords": [
+    "expand",
+    "configuration"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/twoquarterrican/any-reducer#readme",
+  "bugs": {
+    "url": "https://github.com/twoquarterrican/any-reducer/issues"
+  },
+  "devDependencies": {
+    "@types/jest": "^26.0.19",
+    "@types/node": "^14.14.14",
+    "dox": "^0.9.0",
+    "jest": "^26.6.3",
+    "prettier": "^2.2.1",
+    "ts-jest": "^26.4.4",
+    "tsdoc-testify": "0.0.3",
+    "typedoc": "^0.19.2",
+    "typedoc-plugin-markdown": "^3.1.1",
+    "typescript": "^4.1.3",
+    "typescript-documentation": "^2.0.0"
+  },
+  "prettier": {
+    "arrowParens": "always",
+    "endOfLine": "auto",
+    "jsxSingleQuote": true,
+    "printWidth": 80,
+    "semi": true,
+    "singleQuote": true,
+    "tabWidth": 2,
+    "trailingComma": "all"
+  }
+}
