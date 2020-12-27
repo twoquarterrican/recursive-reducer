@@ -1,0 +1,35 @@
+diff --git a/node_modules/typescript-doctest/lib/src/Config.js b/node_modules/typescript-doctest/lib/src/Config.js
+index f899955..7c8618e 100644
+--- a/node_modules/typescript-doctest/lib/src/Config.js
++++ b/node_modules/typescript-doctest/lib/src/Config.js
+@@ -37,7 +37,7 @@ class Config {
+                     // Make the imports relative to the generated test file
+                     const testFile = path.join(testBase, sourceFile.substring(projectDir.length));
+                     const moduleFile = result.resolvedModule.resolvedFileName;
+-                    return path.relative(path.dirname(testFile), moduleFile).replace(/\.ts$/, '');
++                    return path.relative(path.dirname(testFile), moduleFile).replace(/\.ts$/, '').replace(/\\/, '/');
+                 }
+                 else {
+                     return importPath;
+diff --git a/node_modules/typescript-doctest/lib/src/MarkdownSource.js b/node_modules/typescript-doctest/lib/src/MarkdownSource.js
+index e7003c2..c39fb04 100644
+--- a/node_modules/typescript-doctest/lib/src/MarkdownSource.js
++++ b/node_modules/typescript-doctest/lib/src/MarkdownSource.js
+@@ -13,7 +13,7 @@ class MarkdownSource {
+         tokens.filter((t) => t.type === 'fence' && t.info === 'typescript doctest').map((token) => {
+             const index = raw.indexOf(token.content);
+             const { line, character } = this.getLineAndCharacterOfPosition(index);
+-            this.tests.push(new DocTest_1.DocTest(token.content, line, character, 'Codeblock', resolver(this.path)));
++            this.tests.push(new DocTest_1.DocTest(token.content, token.map[0], character, 'Codeblock', resolver(this.path)));
+         });
+     }
+     hasTests() {
+@@ -25,7 +25,7 @@ class MarkdownSource {
+     getLineAndCharacterOfPosition(index) {
+         const leadingText = this.raw.substring(0, index);
+         // TODO support other line modes
+-        const lines = leadingText.split(/\n/g);
++        const lines = leadingText.split(/(\n)/g);
+         return {
+             line: lines.length - 1,
+             character: lines[lines.length - 1].length,

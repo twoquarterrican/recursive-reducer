@@ -1,3 +1,5 @@
+import { empty, Optional, present } from 'src/optional';
+
 /**
  * Create a function that can be applied to any object.
  * The function will take the initial value, then iterate
@@ -17,7 +19,7 @@
  *
  * @example
  * ```
- * import {objReducer} from 'src/index'
+ * import {objReducer} from 'src/recursiveReducer'
  *
  * const reducer = objReducer((prev: any[], current: any, _key: string) => {
  *     prev.push(current)
@@ -36,59 +38,47 @@ export const objReducer = <S, T>(
 ): ((obj: { [k: string]: S }) => T) => {
   return (obj: { [k: string]: S }): T => {
     let value = initial();
-    for (let key of Object.keys(obj)) {
+    for (const key of Object.keys(obj)) {
       value = callback(value, obj[key], key);
     }
     return value;
   };
 };
 
-export interface Optional<T> {
-  isPresent: boolean;
-  value?: T;
-}
-
-export const present = <T>(value: T) => ({
-  isPresent: true,
-  value,
-});
-
-const EMPTY = {
-  isPresent: false,
-};
-
-export const empty = <T>() => EMPTY as Optional<T>;
-
-export interface IArrReduction<S, T> {
-  initial: () => T;
+interface IArrReduction<S, T> {
   callback: (prev: T, current: S, index: number) => T;
+  initial: () => T;
 }
 
 const ARR_COPY_REDUCTION: IArrReduction<any, any[]> = {
-  initial: () => [],
   callback: (prev: any[], current: any) => {
     prev.push(current);
     return prev;
   },
+  initial: () => [],
 };
 
-const arrCopyReduction = <S>(): IArrReduction<S, S[]> => ARR_COPY_REDUCTION as IArrReduction<S, S[]>;
+const arrCopyReduction = <S>(): IArrReduction<S, S[]> =>
+  ARR_COPY_REDUCTION as IArrReduction<S, S[]>;
 
-export interface IObjReduction<S, T> {
-  initial: () => T;
+interface IObjReduction<S, T> {
   callback: (prev: T, current: S, key: string) => T;
+  initial: () => T;
 }
 
-const objCopyReduction = <S>(): IObjReduction<S, any> => ({
-  initial: {} as any,
-  callback: (prev: any, current: S, key: string) => {
+const OBJ_COPY_REDUCTION: IObjReduction<any, any> = {
+  callback: (prev: any, current: any, key: string) => {
     prev[key] = current;
     return prev;
   },
-});
+  initial: () => ({}),
+};
+
+const objCopyReduction = <S>(): IObjReduction<S, S> =>
+  OBJ_COPY_REDUCTION as IObjReduction<S, S>;
 
 export type TPath = (string | number)[];
-export type TPathFn<S, T> = (s: S, path: TPath) => T;
+type TPathFn<S, T> = (s: S, path: TPath) => T;
 
 const extendArrPathFn = <T>(
   arrPathFn: TPathFn<any[], T>,
@@ -108,19 +98,15 @@ const arrReductionToRecursivePathFn = <R, S, T>(
 ): TPathFn<R[], T> => {
   return (rs: R[], path: TPath): T => {
     const { callback, initial } = arrReduction;
-    return rs.reduce(
-      (prev: T, current: R, index: number) => {
-        const s: S = recurse(current, [...path, index]);
-        return callback(prev, s, index);
-      },
-      initial(),
-    );
+    return rs.reduce((prev: T, current: R, index: number) => {
+      const s: S = recurse(current, [...path, index]);
+      return callback(prev, s, index);
+    }, initial());
   };
 };
 
-
 const extendObjPathFn = <T>(
-  objPathFunction: TPathFn<object, T>,
+  objPathFunction: TPathFn<Record<string, unknown>, T>,
 ): TPathFn<any, Optional<T>> => {
   return (a: any, path: TPath): Optional<T> => {
     if (a !== null && typeof a === 'object') {
@@ -134,16 +120,13 @@ const extendObjPathFn = <T>(
 const objReductionToRecursivePathFn = <R, S, T>(
   objReduction: IObjReduction<R, T>,
   recurse: TPathFn<S | undefined, R>,
-): TPathFn<{ [k: string]: S }, T> => {
+): TPathFn<Record<string, S>, T> => {
   const { initial, callback } = objReduction;
-  return (obj: { [k: string]: S }, path: TPath): T =>
-    objReducer(
-      (prev: T, current: S | undefined, key: string) => {
-        const reducedItem: R = recurse(current, [...path, key]);
-        return callback(prev, reducedItem, key);
-      },
-      initial,
-    )(obj);
+  return (obj: Record<string, S>, path: TPath): T =>
+    objReducer((prev: T, current: S | undefined, key: string) => {
+      const reducedItem: R = recurse(current, [...path, key]);
+      return callback(prev, reducedItem, key);
+    }, initial)(obj);
 };
 
 /**
@@ -181,7 +164,7 @@ class RecursiveReducer {
   }
 
   private reduceInternal(current: any, path: TPath): any {
-    for (let converter of this.pathFns) {
+    for (const converter of this.pathFns) {
       const { isPresent, value: convertedValue } = converter(current, path);
       if (isPresent) {
         return convertedValue;
@@ -200,7 +183,7 @@ class RecursiveReducer {
  * recurse until value matches converter.
  * @param objPathFnFactories take a special recursion value to dig deeper, produce a TObjPathFunction
  */
-export const recursiveReducer = (
+const recursiveReducer = (
   ...objPathFnFactories: ((
     recurse: TPathFn<any, any>,
   ) => TPathFn<any, Optional<any>>)[]
@@ -210,40 +193,38 @@ export const recursiveReducer = (
   return (a: any) => recursiveReducerInstance.reduce(a);
 };
 
-/**
- *
- * @param mapper
- */
-export const recursiveReducerFromMapper = <T>(mapper: (a: any) => Optional<T>) =>
+export const recursiveMapper = <T>(
+  pathFnFactory: (recurse: TPathFn<any, any>) => TPathFn<any, Optional<T>>,
+) =>
   recursiveReducer(
-    () => mapper,
-    (recurse: TPathFn<any, any>) => extendArrPathFn(
-      arrReductionToRecursivePathFn(
-        arrCopyReduction(),
-        recurse)),
-    (recurse: TPathFn<any, any>) => extendObjPathFn(
-      objReductionToRecursivePathFn(
-        objCopyReduction(),
-        recurse)),
+    pathFnFactory,
+    (recurse: TPathFn<any, any>) =>
+      extendArrPathFn(
+        arrReductionToRecursivePathFn(arrCopyReduction(), recurse),
+      ),
+    (recurse: TPathFn<any, any>) =>
+      extendObjPathFn(
+        objReductionToRecursivePathFn(objCopyReduction(), recurse),
+      ),
   );
 
 /**
  * Factory method for recursive reducer.
  * Typical examples aggregate values in nested objects.
  *
- * @param map applied to any non-object, non-array value, returns value that
+ * @param mapper applied to any non-object, non-array value, returns value that
  * can be used in the reducer
  * @param reduceCallback applied to previous and current values to compute new
  * value. At first, prev comes from reduceInitial(). On subsequent invocations,
  * prev comes from previous invocations. The current parameter in this callback
- * comes from the output of the map function.
+ * comes from the output of the mapper function.
  * @param reduceInitial provides initial value for reduction. Should always
  * provide a new object or else an immutable object.
  *
  * @example
  * ```
- * import {recursiveReducerFromMapReduce} from 'src/index';
- * const sumNumbers = recursiveReducerFromMapReduce(
+ * import {recursiveMapperReducer} from 'src/recursiveReducer';
+ * const sumNumbers = recursiveMapperReducer(
  *   (a: any) => typeof a === 'number' ? a : 0,
  *   (prev: number, current: number) => prev + current,
  *   () => 0,
@@ -254,22 +235,32 @@ export const recursiveReducerFromMapper = <T>(mapper: (a: any) => Optional<T>) =
  * expect(sumNumbers({a: {}, b: null, c: "h"})).toBe(0);
  * ```
  */
-export const recursiveReducerFromMapReduce = <S, T>(
-  map: (a: any) => S,
+export const recursiveMapperReducer = <S, T>(
+  mapper: (a: any) => S,
   reduceCallback: (prev: T, current: S) => T,
   reduceInitial: () => T,
 ) =>
   recursiveReducer(
-    (recurse: TPathFn<any, any>) => extendArrPathFn(
-      arrReductionToRecursivePathFn({
-        initial: reduceInitial,
-        callback: reduceCallback,
-      }, recurse)),
-    (recurse: TPathFn<any, any>) => extendObjPathFn(
-      objReductionToRecursivePathFn({
-        initial: reduceInitial,
-        callback: reduceCallback,
-      }, recurse)),
+    (recurse: TPathFn<any, any>) =>
+      extendArrPathFn(
+        arrReductionToRecursivePathFn(
+          {
+            initial: reduceInitial,
+            callback: reduceCallback,
+          },
+          recurse,
+        ),
+      ),
+    (recurse: TPathFn<any, any>) =>
+      extendObjPathFn(
+        objReductionToRecursivePathFn(
+          {
+            initial: reduceInitial,
+            callback: reduceCallback,
+          },
+          recurse,
+        ),
+      ),
     // last part is not recursive
-    () => (a: any) => present(map(a)),
+    () => (a: any) => present(mapper(a)),
   );
