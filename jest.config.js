@@ -1,8 +1,10 @@
 module.exports = {
   moduleNameMapper: {
-    'src/rr': '<rootDir>/src/recursiveReducer',
-    'src/(.*)': '<rootDir>/src/$1',
+  //   'src/rr': '<rootDir>/src/recursiveReducer',
+  //   'src/(.*)': '<rootDir>/src/$1',
+  //   '([a-z]+)': '<rootDir>/src/$1',
   },
+  moduleDirectories: ['node_modules','src'],
   roots: ['<rootDir>/src'],
   testMatch: [
     '**/__tests__/**/*.+(ts|tsx|js)',
@@ -17,10 +19,10 @@ module.exports = {
   ],
   coverageThreshold: {
     global: {
-      branches: 90,
-      functions: 95,
-      lines: 95,
-      statements: 95,
+      branches: 100,
+      functions: 100,
+      lines: 100,
+      statements: 100,
     }
   },
   collectCoverageFrom: [

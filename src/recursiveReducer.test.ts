@@ -1,10 +1,11 @@
 import {
-  objReducer,
+  empty,
+  present,
+  recordReducer,
   recursiveMapper,
   recursiveMapperReducer,
   TPath,
-} from 'src/recursiveReducer';
-import { empty, present } from 'src/optional';
+} from './recursiveReducer';
 
 test('copy object recursively, prepending path to all string values', () => {
   const prependPathToStringValues = recursiveMapper(
@@ -108,7 +109,7 @@ test('Subtract 14 from every number', () => {
 });
 
 test('Sum the values in an object', () => {
-  const reducer = objReducer(
+  const reducer = recordReducer(
     (prev: number, current: number | undefined, _key: string) =>
       prev + (current ?? 0),
     () => 0,
@@ -117,7 +118,7 @@ test('Sum the values in an object', () => {
 });
 
 test('Collect the numbers in an object to a list', () => {
-  const reducer = objReducer(
+  const reducer = recordReducer(
     (prev: number[], current: any, _key: string) => {
       if (typeof current === 'number') {
         prev.push(current);

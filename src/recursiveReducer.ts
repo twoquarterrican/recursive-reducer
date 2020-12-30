@@ -1,5 +1,3 @@
-import { empty, Optional, present } from 'src/optional';
-
 /**
  * Create a function that can be applied to any object.
  * The function will take the initial value, then iterate
@@ -19,9 +17,9 @@ import { empty, Optional, present } from 'src/optional';
  *
  * @example
  * ```
- * import {objReducer} from 'src/recursiveReducer'
+ * import {recordReducer} from 'index'
  *
- * const reducer = objReducer((prev: any[], current: any, _key: string) => {
+ * const reducer = recordReducer((prev: any[], current: any, _key: string) => {
  *     prev.push(current)
  *     return prev
  *   },
@@ -32,14 +30,14 @@ import { empty, Optional, present } from 'src/optional';
  * expect(reducer({a: {}, b: null, c: "h"})).toStrictEqual([{}, null, "h"])
  * ```
  */
-export const objReducer = <S, T>(
+export const recordReducer = <S, T>(
   callback: (prev: T, current: S | undefined, key: string) => T,
   initial: () => T,
-): ((obj: { [k: string]: S }) => T) => {
-  return (obj: { [k: string]: S }): T => {
+): ((record: Record<string, S>) => T) => {
+  return (record: Record<string, S>): T => {
     let value = initial();
-    for (const key of Object.keys(obj)) {
-      value = callback(value, obj[key], key);
+    for (const key of Object.keys(record)) {
+      value = callback(value, record[key], key);
     }
     return value;
   };
@@ -78,8 +76,30 @@ const objCopyReduction = <S>(): IObjReduction<S, S> =>
   OBJ_COPY_REDUCTION as IObjReduction<S, S>;
 
 export type TPath = (string | number)[];
-type TPathFn<S, T> = (s: S, path: TPath) => T;
 
+export interface IRecordLookupResult {
+  resolvedPath: TPath;
+  unresolvedPath: TPath;
+  value: any;
+}
+
+export type TPathFn<S, T> = (s: S, path: TPath) => T;
+
+export interface Optional<T> {
+  isPresent: boolean;
+  value?: T;
+}
+
+export const present = <T>(value: T) => ({
+  isPresent: true,
+  value,
+});
+
+const EMPTY = {
+  isPresent: false,
+};
+
+export const empty = <T>() => EMPTY as Optional<T>;
 const extendArrPathFn = <T>(
   arrPathFn: TPathFn<any[], T>,
 ): TPathFn<any, Optional<T>> => {
@@ -123,7 +143,7 @@ const objReductionToRecursivePathFn = <R, S, T>(
 ): TPathFn<Record<string, S>, T> => {
   const { initial, callback } = objReduction;
   return (obj: Record<string, S>, path: TPath): T =>
-    objReducer((prev: T, current: S | undefined, key: string) => {
+    recordReducer((prev: T, current: S | undefined, key: string) => {
       const reducedItem: R = recurse(current, [...path, key]);
       return callback(prev, reducedItem, key);
     }, initial)(obj);
@@ -179,11 +199,15 @@ class RecursiveReducer {
 }
 
 /**
- * Create reducer that can be used an any type. Will
- * recurse until value matches converter.
- * @param objPathFnFactories take a special recursion value to dig deeper, produce a TObjPathFunction
+ * Internal factory method.
+ * Not ready yet to expose this because it is only really
+ * usefule with some of the helper functions like extendArrPathFn,
+ * arrReductionToRecursivePathFn, arrCopyReduction, etc.
+ * These need some time to mature before being tied down to them.
+ * @param objPathFnFactories each factory takes a special recursion value which
+ * can be used to dig deeper with the resulting TPathFn
  */
-const recursiveReducer = (
+const recursiveReducerInternal = (
   ...objPathFnFactories: ((
     recurse: TPathFn<any, any>,
   ) => TPathFn<any, Optional<any>>)[]
@@ -193,10 +217,39 @@ const recursiveReducer = (
   return (a: any) => recursiveReducerInstance.reduce(a);
 };
 
+/**
+ * Factory method for recursive reducer.
+ * Typical examples copy nested objects with some modifications to certain
+ * values.
+ * @param pathFnFactory maps entries to other values
+ *
+ * @example
+ * ```
+ * import {
+ *   recursiveMapper, TPath, TPathFn, Optional, present, empty,
+ * } from 'index';
+ *
+ * const wrapInArray: TPathFn<any, Optional<any[]>> = (a: any, path: TPath) => {
+ *   if (path[path.length - 1] === 'values' && !Array.isArray(a)) {
+ *     return present([a]);
+ *   } else {
+ *     return empty();
+ *   }
+ * }
+ * const recursivelyWrapInArray = recursiveMapper(() => wrapInArray);
+ * expect(recursivelyWrapInArray({
+ *   a: 1, b: [{values: 3, other: [true, false]}, null, {values: [3, 7]}],
+ *   values: "hello",
+ * })).toStrictEqual({
+ *   a: 1, b: [{values: [3], other: [true, false]}, null, {values: [3, 7]}]
+ *   values: ["hello"],
+ * });
+ * ```
+ */
 export const recursiveMapper = <T>(
   pathFnFactory: (recurse: TPathFn<any, any>) => TPathFn<any, Optional<T>>,
 ) =>
-  recursiveReducer(
+  recursiveReducerInternal(
     pathFnFactory,
     (recurse: TPathFn<any, any>) =>
       extendArrPathFn(
@@ -220,10 +273,16 @@ export const recursiveMapper = <T>(
  * comes from the output of the mapper function.
  * @param reduceInitial provides initial value for reduction. Should always
  * provide a new object or else an immutable object.
+ * @param optionalMapper this mapper is optional in the sense that you do
+ * not need to pass this parameter and its return type is Optional.
+ * This optional mapper can be used to compute values non-recursively. If
+ * it returns a non-empty Optional, say present(x), then no more recursion
+ * is done at this node of the object. If it returns empty, then recursion
+ * will continue. See examples below for how to use this optional mapper.
  *
  * @example
  * ```
- * import {recursiveMapperReducer} from 'src/recursiveReducer';
+ * import {recursiveMapperReducer} from 'index';
  * const sumNumbers = recursiveMapperReducer(
  *   (a: any) => typeof a === 'number' ? a : 0,
  *   (prev: number, current: number) => prev + current,
@@ -234,13 +293,28 @@ export const recursiveMapper = <T>(
  * // second use of same reducer
  * expect(sumNumbers({a: {}, b: null, c: "h"})).toBe(0);
  * ```
+ * @example
+ * ```
+ * import {recursiveMapperReducer} from 'index';
+ * const countEmptyArrays = recursiveMapperReducer(
+ *   () => 0, // all-non array values are mapped to 0
+ *   (prev: number, current: number) => prev + current,
+ *   () => 0,
+ *   (a: any) => Array.isArray(a) && a.length === 0 ? present(1) : empty(),
+ * );
+ * expect(countEmptyArrays({a: true, b: [7], c: 90})).toBe(0);
+ * expect(countEmptyArrays({a: {}, b: null, c: []})).toBe(1);
+ * expect(countEmptyArrays({a: {}, b: [[]], c: []})).toBe(2);
+ * ```
  */
 export const recursiveMapperReducer = <S, T>(
   mapper: (a: any) => S,
   reduceCallback: (prev: T, current: S) => T,
   reduceInitial: () => T,
+  optionalMapper: (a: any) => Optional<T> = () => empty(),
 ) =>
-  recursiveReducer(
+  recursiveReducerInternal(
+    () => optionalMapper,
     (recurse: TPathFn<any, any>) =>
       extendArrPathFn(
         arrReductionToRecursivePathFn(
@@ -264,3 +338,65 @@ export const recursiveMapperReducer = <S, T>(
     // last part is not recursive
     () => (a: any) => present(mapper(a)),
   );
+
+/**
+ * Look up a value in any object. Stop when reaching null or undefined.
+ * Return the resolvedPath, unresolvedPath, and value.
+ * @param path list of keys/indexes to look up
+ * @example
+ * ```
+ * import {recordLookup} from './index';
+ *
+ * expect(recordLookup(['a'])({a: true, b: [7])).toStrictEqual({
+ *   resolvedPath: ['a'],
+ *   unresolvedPath: [],
+ *   value: true,
+ * });
+ * expect(recordLookup(['a', 0])({a: true, b: [7]})).toStrictEqual({
+ *   resolvedPath: ['a', 0],
+ *   unresolvedPath: [],
+ *   value: undefined,
+ * });
+ * expect(recordLookup(['b'])({a: true, b: [7]})).toStrictEqual({
+ *   resolvedPath: ['b'],
+ *   unresolvedPath: [],
+ *   value: [7],
+ * });
+ * expect(recordLookup(['b', 0])({a: true, b: [7]})).toStrictEqual({
+ *   resolvedPath: ['b', 0],
+ *   unresolvedPath: [],
+ *   value: 7,
+ * });
+ * expect(recordLookup(['c'])({a: true, b: [7]})).toStrictEqual({
+ *   resolvedPath: ['c'],
+ *   unresolvedPath: [],
+ *   value: undefined,
+ * });
+ * expect(recordLookup(['c', 0])({a: true, b: [7]})).toStrictEqual({
+ *   resolvedPath: ['c'],
+ *   unresolvedPath: [0],
+ *   value: undefined,
+ * });
+ * ```
+ */
+export const recordLookup = (path: TPath) => (
+  record: any,
+): IRecordLookupResult => {
+  const resolvedPath = [];
+  const unresolvedPath = [...path];
+  let value: any = record;
+  for (const key of path) {
+    if (value === null || value === undefined) {
+      break;
+    } else {
+      value = value[key];
+      resolvedPath.push(key);
+      unresolvedPath.shift();
+    }
+  }
+  return {
+    resolvedPath,
+    unresolvedPath,
+    value,
+  };
+};
