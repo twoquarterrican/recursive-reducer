@@ -1,6 +1,6 @@
 {
   "name": "recursive-reducer",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Reduce objects similar to the way one can reduce arrays including recursive reductions.",
   "main": "dist/lib/index.js",
   "module": "dist/lib/index.es5.js",
@@ -25,7 +25,7 @@
     "prepare": "npm run build",
     "prepublishOnly": "npm test && npm run lint",
     "preversion": "npm run lint",
-    "version": "npm run format && git add -A src",
+    "version": "git add -A src",
     "postversion": "git push && git push --tags"
   },
   "husky": {
