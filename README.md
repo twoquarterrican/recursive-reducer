@@ -1,8 +1,12 @@
-# Any reducer
+# recursive-reducer
+
+[recursive-reducer on npm](https://www.npmjs.com/package/recursive-reducer)
+
+## Motivation
 
 The method `reduce` in `Array` can be used to implement `map`, `filter`,
 `count`, and other generally useful operations. It is a core operation
-which we extend to objects. There are two versions: non-recursive `objReducer`
+which we extend to objects. There are two versions: non-recursive `recordReducer`
 and recursive reducers. The recursive reducer has factory methods
 `recursiveMapper` and `recursiveMapperReducer` which, roughly speaking,
 are useful for "copy-like" operations and "summarization" operations
@@ -64,4 +68,6 @@ expect(await allEven({a: 4, b: 7})).toBe(false);
 ```
 
 # Recursive
+
+TODO: fill in examples.
 
