@@ -2,12 +2,9 @@
   "name": "recursive-reducer",
   "version": "0.0.3",
   "description": "Reduce objects similar to the way one can reduce arrays including recursive reductions.",
-  "main": "dist/lib/index.js",
-  "module": "dist/lib/index.es5.js",
-  "typings": "dist/types/index.d.ts",
-  "files": [
-    "dist"
-  ],
+  "main": "lib/index.js",
+  "module": "lib/index.es5.js",
+  "types": "lib/index.d.ts",
   "author": "twoquarterrican",
   "repository": {
     "type": "git",
@@ -15,14 +12,14 @@
   },
   "scripts": {
     "build": "npm run lint && npm run test && npm run compile",
-    "clean": "rimraf dist/",
+    "clean": "rimraf lib/",
     "compile": "npm run clean && tsc",
     "generate-doctests": "tsdoc-testify --fileMatch src/*.ts && ts-doctest . src",
     "lint": "eslint \"src/**/*.{js,ts,tsx}\" --quiet --fix && prettier --check src",
     "prettier": "prettier --write src",
     "rimraf": "./node_modules/rimraf/bin.js",
     "test": "npm run generate-doctests && jest --coverage",
-    "prepare": "npm run build",
+    "prepare": "npm run compile",
     "prepublishOnly": "npm test && npm run lint",
     "preversion": "npm run lint",
     "version": "git add -A src",
