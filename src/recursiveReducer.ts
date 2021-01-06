@@ -388,6 +388,24 @@ export const recursiveMapperReducer = <S, T>(
  *   values: [input],
  * });
  * ```
+ *
+ * @example
+ * ```
+ * const input = { a: ['h', 'e', {l: 'lo'}] }
+ * const valueKeyFn = (value: any, key: string | number) => {
+ *   const result = value[key];
+ *   if (typeof key === 'string' && key.endsWith('!') && !result) {
+ *     throw new Error(`Value at ${key.substr(0, key.length - 1)} is not present`);
+ *   }
+ *   return result;
+ * }
+ * expect(recordLookup(['a', 2, 'l'], valueKeyFn)(input)).toStrictEqual({
+ *   resolvedPath: ['a', 2, 'l'],
+ *   unresolvedPath: [],
+ *   value: 'lo',
+ *   values: [input, input['a'], input['a'][2]],
+ * }
+ * ```
  */
 export function recordLookup(
   path: TPath,
