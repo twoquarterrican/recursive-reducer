@@ -81,6 +81,7 @@ export interface IRecordLookupResult {
   resolvedPath: TPath;
   unresolvedPath: TPath;
   value: any;
+  values: any[];
 }
 
 export type TPathFn<S, T> = (s: S, path: TPath) => T;
@@ -347,35 +348,42 @@ export const recursiveMapperReducer = <S, T>(
  * ```
  * import {recordLookup} from './index';
  *
- * expect(recordLookup(['a'])({a: true, b: [7])).toStrictEqual({
+ * const input = {a: true, b: [7]};
+ * expect(recordLookup(['a'])(input)).toStrictEqual({
  *   resolvedPath: ['a'],
  *   unresolvedPath: [],
  *   value: true,
+ *   values: [input],
  * });
- * expect(recordLookup(['a', 0])({a: true, b: [7]})).toStrictEqual({
+ * expect(recordLookup(['a', 0])(input)).toStrictEqual({
  *   resolvedPath: ['a', 0],
  *   unresolvedPath: [],
  *   value: undefined,
+ *   values: [input, input['a']],
  * });
- * expect(recordLookup(['b'])({a: true, b: [7]})).toStrictEqual({
+ * expect(recordLookup(['b'])(input)).toStrictEqual({
  *   resolvedPath: ['b'],
  *   unresolvedPath: [],
  *   value: [7],
+ *   values: [input],
  * });
- * expect(recordLookup(['b', 0])({a: true, b: [7]})).toStrictEqual({
+ * expect(recordLookup(['b', 0])(input)).toStrictEqual({
  *   resolvedPath: ['b', 0],
  *   unresolvedPath: [],
  *   value: 7,
+ *   values: [input, input['b']],
  * });
- * expect(recordLookup(['c'])({a: true, b: [7]})).toStrictEqual({
+ * expect(recordLookup(['c'])(input)).toStrictEqual({
  *   resolvedPath: ['c'],
  *   unresolvedPath: [],
  *   value: undefined,
+ *   values: [input],
  * });
- * expect(recordLookup(['c', 0])({a: true, b: [7]})).toStrictEqual({
+ * expect(recordLookup(['c', 0])(input)).toStrictEqual({
  *   resolvedPath: ['c'],
  *   unresolvedPath: [0],
  *   value: undefined,
+ *   values: [input],
  * });
  * ```
  */
@@ -385,10 +393,12 @@ export const recordLookup = (path: TPath) => (
   const resolvedPath = [];
   const unresolvedPath = [...path];
   let value: any = record;
+  const values: any[] = [];
   for (const key of path) {
     if (value === null || value === undefined) {
       break;
     } else {
+      values.push(value);
       value = value[key];
       resolvedPath.push(key);
       unresolvedPath.shift();
@@ -398,5 +408,6 @@ export const recordLookup = (path: TPath) => (
     resolvedPath,
     unresolvedPath,
     value,
+    values,
   };
 };
