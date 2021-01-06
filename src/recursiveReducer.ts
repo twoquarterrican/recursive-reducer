@@ -434,3 +434,48 @@ export function recordLookup(
     };
   };
 }
+
+/**
+ * Helper/utility function to recursively iterate over an object and
+ * collect all non-empty mapped values to a list.
+ *
+ * @param optMapper takes any value and maps it to an optional of the declared
+ * generic type. Empty optional means this value does not contribute to the
+ * result. Present optional means this value contributes one item to the resulting
+ * list.
+ * Example: apply a filter
+ * @example
+ * ```
+ * import { extractAll } from 'index';
+ * const extractNumbers = extractAll((a: any) => typeof a === 'number' ? present(a) : empty());
+ * expect(extractNumbers([3, 'a', {b: 7, c: 9}, {d: [11, 13]}])).toStrictEqual([
+ *  3, 7, 9, 11, 13,
+ * ]);
+ * expect(extractNumbers(undefined)).toStrictEqual([]);
+ * expect(extractNumbers(null)).toStrictEqual([]);
+ * expect(extractNumbers([])).toStrictEqual([]);
+ * expect(extractNumbers([3])).toStrictEqual([3]);
+ * expect(extractNumbers({3:1})).toStrictEqual([1]);
+ * expect(extractNumbers({3:[1]})).toStrictEqual([1]);
+ * ```
+ */
+export const extractAll = <T>(optMapper: (a: any) => Optional<T>) => (
+  a: any,
+): T[] => {
+  return recursiveMapperReducer(
+    () => [],
+    (prev: any[], current: any[]) => {
+      prev.push(...current);
+      return prev;
+    },
+    () => [],
+    (a_: any): Optional<T[]> => {
+      const optionalt: Optional<T> = optMapper(a_);
+      if (optionalt.isPresent) {
+        return present([optionalt.value!]);
+      } else {
+        return empty();
+      }
+    },
+  )(a);
+};

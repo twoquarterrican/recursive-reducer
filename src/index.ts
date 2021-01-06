@@ -9,4 +9,5 @@ export {
   recordLookup,
   recursiveMapper,
   TPath,
+  extractAll,
 } from './recursiveReducer';
