@@ -344,6 +344,8 @@ export const recursiveMapperReducer = <S, T>(
  * Look up a value in any object. Stop when reaching null or undefined.
  * Return the resolvedPath, unresolvedPath, and value.
  * @param path list of keys/indexes to look up
+ * @param valueKeyFn function taking an object and a key (string or number)
+ * and producing another value. Default is (value, key) => value[key]
  * @example
  * ```
  * import {recordLookup} from './index';
@@ -387,27 +389,30 @@ export const recursiveMapperReducer = <S, T>(
  * });
  * ```
  */
-export const recordLookup = (path: TPath) => (
-  record: any,
-): IRecordLookupResult => {
-  const resolvedPath = [];
-  const unresolvedPath = [...path];
-  let value: any = record;
-  const values: any[] = [];
-  for (const key of path) {
-    if (value === null || value === undefined) {
-      break;
-    } else {
-      values.push(value);
-      value = value[key];
-      resolvedPath.push(key);
-      unresolvedPath.shift();
+export function recordLookup(
+  path: TPath,
+  valueKeyFn = (value: any, key: string | number) => value[key],
+): (record: any) => IRecordLookupResult {
+  return (record: any) => {
+    const resolvedPath = [];
+    const unresolvedPath = [...path];
+    let value: any = record;
+    const values: any[] = [];
+    for (const key of path) {
+      if (value === null || value === undefined) {
+        break;
+      } else {
+        values.push(value);
+        value = valueKeyFn(value, key);
+        resolvedPath.push(key);
+        unresolvedPath.shift();
+      }
     }
-  }
-  return {
-    resolvedPath,
-    unresolvedPath,
-    value,
-    values,
+    return {
+      resolvedPath,
+      unresolvedPath,
+      value,
+      values,
+    };
   };
-};
+}
