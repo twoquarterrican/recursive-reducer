@@ -1,6 +1,6 @@
 {
   "name": "recursive-reducer",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Reduce objects similar to the way one can reduce arrays including recursive reductions.",
   "main": "lib/index.js",
   "module": "lib/index.es5.js",
