@@ -6,8 +6,7 @@ export {
   recursiveMapperReducer,
   TPathFn,
   IRecordLookupResult,
-  recordLookup,
   recursiveMapper,
   TPath,
-  extractAll,
 } from './recursiveReducer';
+export { extractAll, recordLookup, promiseAll } from './helpers';

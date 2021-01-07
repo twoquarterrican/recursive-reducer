@@ -1,0 +1,14 @@
+diff --git a/node_modules/tsdoc-testify/lib/funcwrapper.js b/node_modules/tsdoc-testify/lib/funcwrapper.js
+index 1177f91..7cb69dd 100644
+--- a/node_modules/tsdoc-testify/lib/funcwrapper.js
++++ b/node_modules/tsdoc-testify/lib/funcwrapper.js
+@@ -5,7 +5,8 @@ function wrapTestFunction(name, body) {
+     const functionName = ts.createIdentifier("test");
+     const caseName = ts.createStringLiteral(name);
+     const blockExpr = ts.createBlock(body);
+-    const testBody = ts.createArrowFunction(undefined, undefined, undefined, undefined, undefined, blockExpr);
++    const asyncKw = ts.createModifier(ts.SyntaxKind.AsyncKeyword);
++    const testBody = ts.createArrowFunction([asyncKw], undefined, asyncKw, undefined, undefined, blockExpr);
+     const testCaseAST = ts.createCall(functionName, undefined, [
+         caseName,
+         testBody
