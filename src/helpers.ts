@@ -6,7 +6,7 @@ import {
   recursiveMapper,
   recursiveMapperReducer,
   TPath,
-} from 'recursiveReducer';
+} from './recursiveReducer';
 
 /**
  * Helper/utility function to recursively iterate over an object and
